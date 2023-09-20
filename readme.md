@@ -12,7 +12,112 @@ It's easy to set log mode and only set paramater when you create log struct inst
 for example:mylog := conselog.NewConsoleLog("ERROR")
 
 ### 2.2. How to interaged with Kafka?
-firstly you should have kafka cluster, if you don't have kafka cluster, you can use below scripts to deploy a kafka cluster asap. and than, you only add kafka broker IP and port in config.yaml.
+First, you should have kafka cluster, if you don't have kafka cluster, you can use below scripts to deploy a kafka cluster asap. 
+for example: deployment kafka(kraft mode) with docker-compose 
+1. Install Docker and docker-compose enviroment.
+```
+sudo yum install docker -y
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.15.1/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+sudo chmod +x /usr/bin/docker-compose
+docker-compose --version
+```
+
+2. configure for docker-compose 
+```
+version: "3.6"
+services:
+  kafka1:
+    container_name: kafka1
+    image: 'bitnami/kafka:3.3.1'
+    user: root
+    ports:
+      - '19092:9092'
+      - '19093:9093'
+    environment:
+      # enalable Kraft mode
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # Define kafka brocker internat ip and port 
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      # Set security protocal
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      # Define extra access IP and port
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://1.1.1.1:19092
+      - KAFKA_BROKER_ID=1
+      - KAFKA_KRAFT_CLUSTER_ID=iZWRiSqjZAlYwlKEqHFQWI
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@172.23.0.11:9093,2@172.23.0.12:9093,3@172.23.0.13:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      # Set inital memory and maximum memory for kafka broker 
+      - KAFKA_HEAP_OPTS=-Xmx512M -Xms256M
+	# Set kafka broker data path
+    volumes:
+      - /opt/volume/kafka/broker01:/bitnami/kafka:rw
+	# Set kafka broker network ip
+    networks:
+      netkafka:
+        ipv4_address: 172.23.0.11
+  kafka2:
+    container_name: kafka2
+    image: 'bitnami/kafka:3.3.1'
+    user: root
+    ports:
+      - '29092:9092'
+      - '29093:9093'
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://1.1.1.1:29092  #修改宿主机ip
+      - KAFKA_BROKER_ID=2
+      - KAFKA_KRAFT_CLUSTER_ID=iZWRiSqjZAlYwlKEqHFQWI #哪一，三个节点保持一致
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@172.23.0.11:9093,2@172.23.0.12:9093,3@172.23.0.13:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_HEAP_OPTS=-Xmx512M -Xms256M
+    volumes:
+      - /opt/volume/kafka/broker02:/bitnami/kafka:rw
+    networks:
+      netkafka:
+        ipv4_address: 172.23.0.12
+  kafka3:
+    container_name: kafka3
+    image: 'bitnami/kafka:3.3.1'
+    user: root
+    ports:
+      - '39092:9092'
+      - '39093:9093'
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://1.1.1.1:39092  #修改宿主机ip
+      - KAFKA_BROKER_ID=3
+      - KAFKA_KRAFT_CLUSTER_ID=iZWRiSqjZAlYwlKEqHFQWI
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@172.23.0.11:9093,2@172.23.0.12:9093,3@172.23.0.13:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_HEAP_OPTS=-Xmx512M -Xms256M
+    volumes:
+      - /opt/volume/kafka/broker03:/bitnami/kafka:rw
+    networks:
+      netkafka:
+        ipv4_address: 172.23.0.13
+networks:
+  name:
+  netkafka:
+    driver: bridge
+    name: netkafka
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.23.0.0/25
+          gateway: 172.23.0.1
+```
+and than, you only add kafka broker IP and port in config.yaml.
 
 ## 3. How to use Loghub?
 
