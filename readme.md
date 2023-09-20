@@ -21,8 +21,8 @@ firstly you should have kafka cluster, if you don't have kafka cluster, you can 
 package main
 
 import (
-	"learning/src/filelog"
-	"learning/src/logmgr"
+	"loghub/src/filelog"
+	"loghub/src/logmgr"
 	"time"
 )
 
