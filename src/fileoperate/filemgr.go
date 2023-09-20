@@ -111,7 +111,7 @@ func WriteIoUtil() {
 	}
 
 }
-func Istype(a interface{}) {
+func Istype(a any) {
 	//a = 1000
 	switch v := a.(type) {
 	case int8:
