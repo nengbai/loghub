@@ -6,11 +6,29 @@ import (
 	"os/signal"
 
 	"github.com/IBM/sarama"
+	"github.com/spf13/viper"
 )
 
 func main() {
+
+	// 1.读取配置文件
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("config")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+	var addrs []string
+	addr0 := viper.GetString("kafka.addrs.0")
+	addr1 := viper.GetString("kafka.addrs.1")
+	addr2 := viper.GetString("kafka.addrs.2")
+	addrs = append(addrs, addr0)
+	addrs = append(addrs, addr1)
+	addrs = append(addrs, addr2)
 	// 连接Kafka集群
-	brokers := []string{"192.168.101.9:19092", "192.168.101.9:29092", "192.168.101.9:39092"}
+	brokers := addrs
+	//brokers := []string{"192.168.101.9:19092", "192.168.101.9:29092", "192.168.101.9:39092"}
 	config := sarama.NewConfig()
 	// 控制每次从 Kafka 中获取的最大记录数 1000
 	config.Consumer.Fetch.Max = 10
