@@ -1,0 +1,28 @@
+database:
+  dbtype: mysql
+  username: micro
+  password: Ora#2021.passwd
+  host: 129.158.203.151:3306
+  dbname: stockappdb
+  charset: utf8mb4
+  parsetime: True
+  maxidleconns: 10
+  maxopenconns: 100
+
+server:
+  runmode: debug
+  httpport: 8081
+  readtimeout: 60
+  writetimeout: 60
+
+redis:
+  addr: 129.158.203.151:6379
+  password:
+  DB: 0
+  poolSize: 1000
+  minIdleConn: 100
+
+kafka:
+  addrs: ["192.168.101.9:19092","192.168.101.9:29092","192.168.101.9:39092"]
+  port:
+
