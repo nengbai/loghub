@@ -156,6 +156,13 @@ func main() {
 
 ### 3.2. Messages Exchange Hub example
 
+Edit config/config.yaml add kafka configure as below:
+```
+kafka:
+  addrs: ["192.168.101.9:19092","192.168.101.9:29092","192.168.101.9:39092"]
+
+```
+
 kafka producer for example:
 
 ```
