@@ -209,7 +209,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-
+  "github.com/spf13/viper"
 	"github.com/IBM/sarama"
 )
 
