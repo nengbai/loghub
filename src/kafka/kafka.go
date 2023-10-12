@@ -48,14 +48,7 @@ func (k *KafkaMessage) InitKafkaLog() error {
 	if err != nil {
 		panic(err)
 	}
-	var addrs []string
-	addr0 := viper.GetString("kafka.addrs.0")
-	addr1 := viper.GetString("kafka.addrs.1")
-	addr2 := viper.GetString("kafka.addrs.2")
-	addrs = append(addrs, addr0)
-	addrs = append(addrs, addr1)
-	addrs = append(addrs, addr2)
-
+	brokers := viper.GetStringSlice("kafka.addrs")
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
@@ -68,7 +61,6 @@ func (k *KafkaMessage) InitKafkaLog() error {
 
 	// 2.获取Kafka Brocker IP and Port
 	//brokers := []string{"192.168.101.9:19092", "192.168.101.9:29092", "192.168.101.9:39092"}
-	brokers := addrs
 	k.KafkaClient = brokers
 	k.Config = config
 

@@ -19,15 +19,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var addrs []string
-	addr0 := viper.GetString("kafka.addrs.0")
-	addr1 := viper.GetString("kafka.addrs.1")
-	addr2 := viper.GetString("kafka.addrs.2")
-	addrs = append(addrs, addr0)
-	addrs = append(addrs, addr1)
-	addrs = append(addrs, addr2)
+
+	brokers := viper.GetStringSlice("kafka.addrs")
 	// 连接Kafka集群
-	brokers := addrs
+	fmt.Println("addrs:", brokers)
 	//brokers := []string{"192.168.101.9:19092", "192.168.101.9:29092", "192.168.101.9:39092"}
 	config := sarama.NewConfig()
 	// 控制每次从 Kafka 中获取的最大记录数 1000
