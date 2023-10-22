@@ -97,6 +97,7 @@ func (r *RabbitmqMessage) InitRabbitmq() error {
 	}
 	mqChan, err = mqConn.Channel()
 	r.Channel = mqChan // 赋值给RabbitMQ对象
+	//defer mqChan.Close()
 	if err != nil {
 		fmt.Printf("MQ打开管道失败:%s \n", err)
 		return err
@@ -275,31 +276,37 @@ func (r *RabbitmqMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 	if err != nil {
 		fmt.Printf("MQ Queuename error:%s \n", err)
 	}
-	err = r.Channel.ExchangeDeclare(
-		r.ExchangeName, // name
-		r.ExchangeType, // type
-		true,           // durable
-		false,          // auto-deleted
-		false,          // internal
-		false,          // no-wait
-		nil,            // arguments
-	)
-	if err != nil {
-		fmt.Printf("MQ Exchange error:%s \n", err)
-	}
-	err = r.Channel.QueueBind(r.QueueName, r.RoutingKey, r.ExchangeName, false, nil)
-	if err != nil {
-		fmt.Println("MQ Channel Exchange Binding fail:", err)
+	if r.ExchangeName != "" {
+		err = r.Channel.ExchangeDeclare(
+			r.ExchangeName, // name
+			r.ExchangeType, // type
+			true,           // durable
+			false,          // auto-deleted
+			false,          // internal
+			false,          // no-wait
+			nil,            // arguments
+		)
+		if err != nil {
+			fmt.Printf("MQ Exchange error:%s \n", err)
+		}
+		err = r.Channel.QueueBind(r.QueueName, r.RoutingKey, r.ExchangeName, false, nil)
+		if err != nil {
+			fmt.Println("MQ Channel Exchange Binding fail:", err)
+		}
 	}
 	if r.LogLv < logmgr.ERROR {
 		message := fmt.Sprintf("[%s] [%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
 		// fmt.Printf("Error message:%s\n", message)
 		rmsg := amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(message),
+			Headers:         amqp.Table{},
+			ContentType:     "text/plain",
+			ContentEncoding: "",
+			DeliveryMode:    amqp.Transient, // 1=non-persistent, 2=persistent
+			Body:            []byte(message),
+			Priority:        0, // 0-9
 		}
 		// fmt.Println("Error Log rmsg:", rmsg)
-		err := mqChan.Publish(r.ExchangeName, r.RoutingKey, false, false, rmsg)
+		err := r.Channel.Publish(r.ExchangeName, r.RoutingKey, false, false, rmsg)
 		if err != nil {
 			fmt.Println("Error Log error:", err)
 		}
@@ -309,11 +316,15 @@ func (r *RabbitmqMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 		message := fmt.Sprintf("[%s][%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
 		// fmt.Printf("Fatal message:%s\n", message)
 		rmsg := amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(message),
+			Headers:         amqp.Table{},
+			ContentType:     "text/plain",
+			ContentEncoding: "",
+			DeliveryMode:    amqp.Transient, // 1=non-persistent, 2=persistent
+			Body:            []byte(message),
+			Priority:        0, // 0-9
 		}
 		// fmt.Println("Fatal Log rmsg:", rmsg)
-		err := mqChan.Publish(r.ExchangeName, r.RoutingKey, false, false, rmsg)
+		err := r.Channel.Publish(r.ExchangeName, r.RoutingKey, false, false, rmsg)
 		if err != nil {
 			fmt.Println("Error Log error:", err)
 		}

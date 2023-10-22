@@ -9,10 +9,10 @@ import (
 func main() {
 	logstr := "Fatal"
 	var (
-		queueName    string = "RabbtDemo"
+		queueName    string = "TopicDemo"
 		routingKey   string = "Rabbit"
-		exchangeName string = "RabbitExchange"
-		exchangeType string = "fanout"
+		exchangeName string = "TopicExchange" // RabbitExchange
+		exchangeType string = "topic"         //"",fanout,direct,topic
 	)
 	queueExch := rabbitmq.QueueExchange{
 		QuName: queueName,
