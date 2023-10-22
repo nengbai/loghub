@@ -8,13 +8,11 @@ import (
 
 func main() {
 	logstr := "Fatal"
-	topic := "test-demo"
-	delayTopic := "delay-demo"
 	var (
-		queueName    string = ""
-		routingKey   string = ""
-		exchangeName string = ""
-		exchangeType string = ""
+		queueName    string = "RabbtDemo"
+		routingKey   string = "Rabbit"
+		exchangeName string = "RabbitExchange"
+		exchangeType string = "fanout"
 	)
 	queueExch := rabbitmq.QueueExchange{
 		QuName: queueName,
@@ -22,12 +20,13 @@ func main() {
 		ExName: exchangeName,
 		ExType: exchangeType,
 	}
-	rq := rabbitmq.NewRabbitmqMessage(logstr, topic, delayTopic, &queueExch)
+	rq := rabbitmq.NewRabbitmqMessage(logstr, &queueExch)
 	lv, err := logmgr.ParseLoglevel(logstr)
 	if err != nil {
 		fmt.Println(err.Error())
 		panic(err)
 	}
+
 	for {
 		if lv < logmgr.ERROR {
 			rq.Debug("This is Debug log")

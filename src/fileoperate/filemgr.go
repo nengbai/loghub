@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -125,5 +126,12 @@ func Istype(a any) {
 	default:
 		fmt.Println("error intput:", v)
 
+	}
+}
+
+// 错误处理函数
+func ErrorHanding(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
 	}
 }

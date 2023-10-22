@@ -25,8 +25,6 @@ type Receiver interface {
 
 type RabbitmqMessage struct {
 	LogLv        logmgr.LogLevel
-	Topic        string
-	DelayTopic   string
 	Config       *amqp.Config
 	Connection   *amqp.Connection
 	Channel      *amqp.Channel
@@ -47,15 +45,13 @@ type QueueExchange struct {
 	ExType string // 交换机类型
 }
 
-func NewRabbitmqMessage(logstr, topic, delayTopic string, q *QueueExchange) *RabbitmqMessage {
+func NewRabbitmqMessage(logstr string, q *QueueExchange) *RabbitmqMessage {
 	loglv, err := logmgr.ParseLoglevel(logstr)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fl := &RabbitmqMessage{
 		LogLv:        loglv,
-		Topic:        topic,
-		DelayTopic:   delayTopic,
 		QueueName:    q.QuName,
 		RoutingKey:   q.RtKey,
 		ExchangeName: q.ExName,
@@ -89,13 +85,7 @@ func (r *RabbitmqMessage) InitRabbitmq() error {
 	vhost := viper.GetString("rabbitmq.vhost")
 	for _, host := range broker {
 		RabbitUrl = "amqp://" + user + ":" + password + "@" + host + vhost
-		/*
-			Uri, err := amqp.ParseURI(RabbitUrl)
-			if err != nil {
-				panic(err.Error())
-			}
-			fmt.Printf("RabbitMQ url is:%s", Uri)
-		*/
+		// fmt.Printf("RabbitMQ url is:%s", RabbitUrl)
 	}
 
 	// RabbitUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/", "admin", "admin", "Pass@word1", 5672)
@@ -267,30 +257,66 @@ func (r *RabbitmqMessage) listenReceiver(receiver Receiver) {
 }
 
 func (r *RabbitmqMessage) log(lv logmgr.LogLevel, format string, a ...any) {
-
 	msg := fmt.Sprintf(format, a...)
 	now := time.Now().Format("2006/01/02 15:04:05")
 	funcName, fileName, lineNo := logmgr.GetFileInfo(3)
-	// 4. 发送消息
+	//  发送消息
 	// Trap SIGINT to trigger a graceful shutdown.
 	// signals := make(chan os.Signal, 1)
+	// fmt.Println("Log is:", r.QueueName)
+	_, err := r.Channel.QueueDeclare(
+		r.QueueName, // name
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	if err != nil {
+		fmt.Printf("MQ Queuename error:%s \n", err)
+	}
+	err = r.Channel.ExchangeDeclare(
+		r.ExchangeName, // name
+		r.ExchangeType, // type
+		true,           // durable
+		false,          // auto-deleted
+		false,          // internal
+		false,          // no-wait
+		nil,            // arguments
+	)
+	if err != nil {
+		fmt.Printf("MQ Exchange error:%s \n", err)
+	}
+	err = r.Channel.QueueBind(r.QueueName, r.RoutingKey, r.ExchangeName, false, nil)
+	if err != nil {
+		fmt.Println("MQ Channel Exchange Binding fail:", err)
+	}
 	if r.LogLv < logmgr.ERROR {
-		//fmt.Printf("newfile:%v\n", f.FileObj)
 		message := fmt.Sprintf("[%s] [%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
+		// fmt.Printf("Error message:%s\n", message)
 		rmsg := amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(message),
 		}
-		r.Channel.Publish(r.ExchangeName, r.RoutingKey, true, false, rmsg)
+		// fmt.Println("Error Log rmsg:", rmsg)
+		err := mqChan.Publish(r.ExchangeName, r.RoutingKey, false, false, rmsg)
+		if err != nil {
+			fmt.Println("Error Log error:", err)
+		}
 		//debugLoop:
 
 	} else if r.LogLv <= logmgr.FATAL {
 		message := fmt.Sprintf("[%s][%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
+		// fmt.Printf("Fatal message:%s\n", message)
 		rmsg := amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(message),
 		}
-		r.Channel.Publish(r.ExchangeName, r.RoutingKey, true, false, rmsg)
+		// fmt.Println("Fatal Log rmsg:", rmsg)
+		err := mqChan.Publish(r.ExchangeName, r.RoutingKey, false, false, rmsg)
+		if err != nil {
+			fmt.Println("Error Log error:", err)
+		}
 	} else {
 		fmt.Println("Loglevel set error:")
 	}

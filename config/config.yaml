@@ -29,11 +29,9 @@ kafka:
   - "192.168.101.9:39092"
 
 rabbitmq:
-  user: admin
-  password: Pass@word1
+  user: guest
+  password: Ora@2023.com
   addrs: 
-  - "192.168.101.9:5672"
-  - "192.168.101.9:5672"
-  - "192.168.101.9:5672"
+  - "150.230.198.116:5672"
   port: 5672
   vhost: /
