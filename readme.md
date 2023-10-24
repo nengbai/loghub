@@ -154,7 +154,7 @@ func main() {
 
 ```
 
-### 3.2. Messages Exchange Hub example
+### 3.2. Messages Exchange Hub example for Kafka
 
 Edit config/config.yaml add kafka configure as below:
 ```
@@ -262,3 +262,122 @@ func main() {
 }
 
 ```
+### 3.3. Messages Exchange Hub example for RabbitMQ
+Edit config/config.yaml add RabbitMQ configure as below:
+```
+rabbitmq:
+  user: guest
+  password: **********
+  addrs: 
+  - "192.168.0.84:5672"
+  vhost: /
+```
+
+RabbitMQ Producer code for example：
+```
+package main
+
+import (
+	"fmt"
+	"loghub/src/logmgr"
+	"loghub/src/rabbitmq"
+
+	"github.com/streadway/amqp"
+)
+
+func main() {
+	var (
+		logstr       string = "Fatal"
+		queueName    string = "TopicDemo"
+		routingKey   string = "Rabbit"
+		exchangeName string = "TopicExchange" // RabbitExchange
+		exchangeType string = "topic"         //"",fanout,direct,topic
+		reliable     bool   = false           //
+	)
+	queueExch := rabbitmq.QueueExchange{
+		QuName: queueName,
+		RtKey:  routingKey,
+		ExName: exchangeName,
+		ExType: exchangeType,
+	}
+	rq := rabbitmq.NewRabbitmqMessage(logstr, &queueExch)
+	lv, err := logmgr.ParseLoglevel(logstr)
+	logmgr.FailOnError(err, "Failed to Parse Log Level")
+	// Reliable publisher confirms require confirm.select support from the connection.
+	if reliable {
+		fmt.Println("enabling publishing confirms.")
+		if err := rq.Channel.Confirm(false); err != nil {
+			fmt.Printf("Channel could not be put into confirm mode: %s\n", err)
+		}
+		confirms := rq.Channel.NotifyPublish(make(chan amqp.Confirmation, 1))
+		defer rabbitmq.ConfirmOne(confirms)
+	}
+	for {
+		if lv < logmgr.ERROR {
+			rq.Debug("This is Debug log")
+			rq.Error("This is Errors log")
+			rq.Info("This is Info log")
+			rq.Warning("This is Warning log")
+		} else if lv <= logmgr.FATAL {
+			rq.Error("This is Errors log")
+			rq.Fatal("This is Fatal log")
+		}
+	}
+}
+
+```
+
+
+RabbitMQ Consumer code for example：
+```
+package main
+
+import (
+	"log"
+	"loghub/src/logmgr"
+	"loghub/src/rabbitmq"
+	"os"
+	"os/signal"
+)
+
+func main() {
+	var (
+		logstr       string = "Fatal"
+		queueName    string = "TopicDemo"
+		routingKey   string = "Rabbit"
+		exchangeName string = "TopicExchange" // RabbitExchange
+		exchangeType string = "topic"         //"",fanout,direct,topic
+	)
+	queueExch := rabbitmq.QueueExchange{
+		QuName: queueName,
+		RtKey:  routingKey,
+		ExName: exchangeName,
+		ExType: exchangeType,
+	}
+	rq := rabbitmq.NewRabbitmqMessage(logstr, &queueExch)
+
+	msgs, err := rq.Channel.Consume(
+		rq.QueueName, // queue
+		"",           // consumer
+		true,         // auto-ack
+		false,        // exclusive
+		false,        // no-local
+		false,        // no-wait
+		nil,          // args
+	)
+	logmgr.FailOnError(err, "Rabbitmq Consumer Failure")
+
+	go func() {
+		for d := range msgs {
+			log.Printf(" [x] %s", string(d.Body))
+		}
+	}()
+	signals := make(chan os.Signal, 1)
+	select {
+	case <-signals:
+		signal.Notify(signals, os.Interrupt)
+	}
+}
+
+```
+
