@@ -95,3 +95,10 @@ func GetOpenfile(a string) (*os.File, error) {
 func TimespecToTime(ts syscall.Timespec) time.Time {
 	return time.Unix(int64(ts.Sec), int64(ts.Nsec))
 }
+
+func FailOnError(err error, msg string) {
+	if err != nil {
+		fmt.Printf("%s: %s", msg, err)
+		panic(err)
+	}
+}

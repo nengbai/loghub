@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"loghub/src/logmgr"
 	"loghub/src/rabbitmq"
+
+	"github.com/streadway/amqp"
 )
 
 func main() {
@@ -13,6 +15,7 @@ func main() {
 		routingKey   string = "Rabbit"
 		exchangeName string = "TopicExchange" // RabbitExchange
 		exchangeType string = "topic"         //"",fanout,direct,topic
+		reliable     bool   = false           //
 	)
 	queueExch := rabbitmq.QueueExchange{
 		QuName: queueName,
@@ -22,11 +25,16 @@ func main() {
 	}
 	rq := rabbitmq.NewRabbitmqMessage(logstr, &queueExch)
 	lv, err := logmgr.ParseLoglevel(logstr)
-	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
+	logmgr.FailOnError(err, "Failed to Parse Log Level")
+	// Reliable publisher confirms require confirm.select support from the connection.
+	if reliable {
+		fmt.Println("enabling publishing confirms.")
+		if err := rq.Channel.Confirm(false); err != nil {
+			fmt.Printf("Channel could not be put into confirm mode: %s\n", err)
+		}
+		confirms := rq.Channel.NotifyPublish(make(chan amqp.Confirmation, 1))
+		defer rabbitmq.ConfirmOne(confirms)
 	}
-
 	for {
 		if lv < logmgr.ERROR {
 			rq.Debug("This is Debug log")
@@ -38,5 +46,4 @@ func main() {
 			rq.Fatal("This is Fatal log")
 		}
 	}
-
 }
