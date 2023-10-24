@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	logstr := "Fatal"
 	var (
+		logstr       string = "Fatal"
 		queueName    string = "TopicDemo"
 		routingKey   string = "Rabbit"
 		exchangeName string = "TopicExchange" // RabbitExchange
