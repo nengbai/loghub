@@ -98,7 +98,7 @@ func (r *RabbitmqMessage) InitRabbitmq() error {
 }
 
 // 关闭RabbitMQ连接
-func (r *RabbitmqMessage) mqClose() {
+func (r *RabbitmqMessage) MQClose() {
 	// 先关闭管道,再关闭链接
 	err := r.Channel.Close()
 	if err != nil {
@@ -195,7 +195,7 @@ func (r *RabbitmqMessage) RegisterReceiver(receiver Receiver) {
 // 监听接收者接收任务
 func (r *RabbitmqMessage) listenReceiver(receiver Receiver) {
 	// 处理结束关闭链接
-	defer r.mqClose()
+	defer r.MQClose()
 	// 验证链接是否正常
 	if r.Channel == nil {
 		r.InitRabbitmq()
@@ -257,18 +257,23 @@ func (r *RabbitmqMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 	// Trap SIGINT to trigger a graceful shutdown.
 	// signals := make(chan os.Signal, 1)
 	// fmt.Println("Log is:", r.QueueName)
-	_, err := r.Channel.QueueDeclare(
-		r.QueueName, // name
-		true,        // durable
-		false,       // durable
-		false,       // exclusive
-		false,       // no-wait if wait for confirm.ask
-		nil,         // arguments
-	)
+	// 用于检查队列是否存在,已经存在不需要重复声明
+	_, err := r.Channel.QueueDeclarePassive(r.QueueName, true, false, false, true, nil)
 	if err != nil {
-		fmt.Printf("MQ Queuename error:%s \n", err)
+		_, err := r.Channel.QueueDeclare(
+			r.QueueName, // name
+			true,        // durable
+			false,       // durable
+			false,       // exclusive
+			false,       // no-wait if wait for confirm.ask
+			nil,         // arguments
+		)
+		if err != nil {
+			fmt.Printf("MQ Queuename error:%s \n", err)
+		}
 	}
-	if r.ExchangeName != "" {
+	err = r.Channel.ExchangeDeclarePassive(r.ExchangeName, r.ExchangeType, true, false, false, true, nil)
+	if err != nil {
 		err = r.Channel.ExchangeDeclare(
 			r.ExchangeName, // name
 			r.ExchangeType, // type
@@ -284,7 +289,6 @@ func (r *RabbitmqMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 		err = r.Channel.QueueBind(r.QueueName, r.RoutingKey, r.ExchangeName, false, nil)
 		logmgr.FailOnError(err, "MQ Channel Exchange Binding Fai:")
 	}
-
 	if r.LogLv < logmgr.ERROR {
 		message := fmt.Sprintf("[%s] [%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
 		// fmt.Printf("Error message:%s\n", message)
@@ -357,4 +361,10 @@ func ConfirmOne(confirms <-chan amqp.Confirmation) {
 	} else {
 		fmt.Printf("Failed delivery of delivery tag: %d\n", confirmed.DeliveryTag)
 	}
+}
+
+func (r *RabbitmqMessage) Consumer(msg []byte) error {
+
+	return nil
+
 }
