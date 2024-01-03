@@ -64,7 +64,7 @@ func (r *RedisMessage) InitRedis() error {
 	return nil
 }
 
-func subscriber(client *redis.Client, key string) {
+func Subscriber(client *redis.Client, key string) {
 	pubsub := client.Subscribe(key)
 	// 使用模式订阅
 	// pubsub := client.PSubscribe(ctx, "mychannel*")
@@ -81,7 +81,7 @@ func subscriber(client *redis.Client, key string) {
 	}
 }
 
-func publisher(client *redis.Client, key, message string) {
+func Publisher(client *redis.Client, key, message string) {
 	for {
 		// 发布消息到频道
 		err := client.Publish(key, message).Err()
@@ -108,13 +108,13 @@ func (r *RedisMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 		// fmt.Println("Error Log rmsg:", rmsg)
 
 		//debugLoop:
-		publisher(r.Client, "mylog", message)
+		Publisher(r.Client, "mylog", message)
 
 	} else if r.LogLv <= logmgr.FATAL {
 		message := fmt.Sprintf("[%s][%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
 		// fmt.Printf("Fatal message:%s\n", message)
 
-		publisher(r.Client, "mylog", message)
+		Publisher(r.Client, "mylog", message)
 
 	} else {
 		fmt.Println("Loglevel set error:")
