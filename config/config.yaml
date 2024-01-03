@@ -36,3 +36,13 @@ rabbitmq:
   - "150.230.198.116:5672"
   port: 5672
   vhost: /
+
+hivemq:
+  addrs: 
+  - "138.2.28.1:1883"
+  password: Ora@2023.com
+  username: admin
+  topic: mylog
+  QoS0: 0    // 至多一次
+  QoS1: 1    // 至少一次
+  QoS2: 2    // 确保只有一次
