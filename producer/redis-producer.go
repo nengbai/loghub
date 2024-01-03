@@ -8,7 +8,17 @@ import (
 
 func main() {
 	logstr := "Fatal"
-	k := redis.NewRedisMessage(logstr)
+	rd := redis.NewRedisMessage(logstr)
+	if rd.Client == nil {
+		rd.InitRedis()
+	}
+	// 验证链接是否正常
+	pong, err := rd.Client.Ping().Result() // 检查是否连接
+	if err != nil {
+		panic(err)
+	}
+	// 连接成功啦
+	fmt.Println(pong)
 	lv, err := logmgr.ParseLoglevel(logstr)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -16,13 +26,13 @@ func main() {
 	}
 	for {
 		if lv < logmgr.ERROR {
-			k.Debug("This is Debug log")
-			k.Error("This is Errors log")
-			k.Info("This is Info log")
-			k.Warning("This is Warning log")
+			rd.Debug("This is Debug log")
+			rd.Error("This is Errors log")
+			rd.Info("This is Info log")
+			rd.Warning("This is Warning log")
 		} else if lv <= logmgr.FATAL {
-			k.Error("This is Errors log")
-			k.Fatal("This is Fatal log")
+			rd.Error("This is Errors log")
+			rd.Fatal("This is Fatal log")
 		}
 	}
 
