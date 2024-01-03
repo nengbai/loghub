@@ -45,14 +45,16 @@ func (r *RedisMessage) InitRedis() error {
 	if err != nil {
 		panic(err)
 	}
+	brokers := viper.GetStringSlice("redis.addrs")
 	db := viper.GetInt("redis.db")
 	// Redis用户的密码
 	password := viper.GetString("redis.password")
 	PoolSize := viper.GetInt("redis.poolSize")
 	MinIdleConns := viper.GetInt("redis.minIdleConn")
-	// RabbitMQ Broker 的ip地址
+
+	// Redis Broker 的ip地址
 	r.Options = &redis.Options{
-		Addr:         viper.GetString("redis.addr"),
+		Addr:         brokers[0],
 		Password:     password,
 		DB:           db,
 		PoolSize:     PoolSize,
@@ -62,6 +64,33 @@ func (r *RedisMessage) InitRedis() error {
 	return nil
 }
 
+func subscriber(client *redis.Client, key string) {
+	pubsub := client.Subscribe(key)
+	// 使用模式订阅
+	// pubsub := client.PSubscribe(ctx, "mychannel*")
+	defer pubsub.Close()
+
+	// 处理订阅接收到的消息
+	for {
+		msg, err := pubsub.ReceiveMessage()
+		if err != nil {
+			return
+		}
+
+		fmt.Println(msg.Channel, msg.Payload)
+	}
+}
+
+func publisher(client *redis.Client, key, message string) {
+	for {
+		// 发布消息到频道
+		err := client.Publish(key, message).Err()
+		if err != nil {
+			panic(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
 func (r *RedisMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	now := time.Now().Format("2006/01/02 15:04:05")
@@ -79,12 +108,13 @@ func (r *RedisMessage) log(lv logmgr.LogLevel, format string, a ...any) {
 		// fmt.Println("Error Log rmsg:", rmsg)
 
 		//debugLoop:
+		publisher(r.Client, "mylog", message)
 
 	} else if r.LogLv <= logmgr.FATAL {
 		message := fmt.Sprintf("[%s][%s] [%s:%s:%d] %s\n", now, logmgr.GetLogString(r.LogLv), fileName, funcName, lineNo, msg)
 		// fmt.Printf("Fatal message:%s\n", message)
 
-		fmt.Println("Fatal Log rmsg:", message)
+		publisher(r.Client, "mylog", message)
 
 	} else {
 		fmt.Println("Loglevel set error:")

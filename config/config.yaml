@@ -17,9 +17,9 @@ server:
 
 redis:
   addrs: 
-  - "129.158.203.151:6379"
-  password:
-  DB: 0
+  - "138.2.28.1:26379"
+  password: Ora@2023.com
+  db: 0
   poolSize: 1000
   minIdleConn: 100
 
