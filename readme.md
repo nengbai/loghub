@@ -1,6 +1,6 @@
 # What's Loghub 
 Loghub is an open-source structured logger for Go (golang) which completely API compatible with the standard library logger  and used by thousands of companies for high-performance log output, message intergration, and mission-critical applications.
-Loghub is easy to set debug-mode and errors-mode for deveplopment and product. I believe Loghub' biggest contribution is to have played a part in today's widespread use of structured logging in Golang. Trere doesn't seem to be a reason to do a major, breaking iteration into Loghub V2, since the fantastic Go community has built those independently. Many fantastic alternatives have sprung up. Loghub would look like those, had it been re-designed with what we know about structured logging in Go today. Check out, for example,console log,file log, and message hub which is eseay to interited with kafka,RabbitMQ and HiveMQ. You only use it like log output. please give a thumbs up to github.com/nenbai/loghub. 
+Loghub is easy to set debug-mode and errors-mode for deveplopment and product. I believe Loghub' biggest contribution is to have played a part in today's widespread use of structured logging in Golang. Trere doesn't seem to be a reason to do a major, breaking iteration into Loghub V2, since the fantastic Go community has built those independently. Many fantastic alternatives have sprung up. Loghub would look like those, had it been re-designed with what we know about structured logging in Go today. Check out, for example,console log,file log, and message hub which is eseay to interited with kafka,RabbitMQ,Redis and HiveMQ. You only use it like log output. please give a thumbs up to github.com/nenbai/loghub. 
 
 ## 1. licenses
 The Loghub licenses to distribute software and documentation, and to accept regular contributions from individuals and corporations and larger grants of existing software products.
@@ -381,3 +381,86 @@ func main() {
 
 ```
 
+### 3.4. Messages Exchange Hub example for Redis
+Edit config/config.yaml add RabbitMQ configure as below:
+
+```
+redis:
+  addrs: 
+  - "190.2.28.1:26379"
+  password: *ra@****.****
+  db: 0
+  poolSize: 1000
+  minIdleConn: 100
+```
+
+Redis Producer puscribe code for example：
+```
+package main
+
+import (
+	"fmt"
+	"loghub/src/logmgr"
+	"loghub/src/redis"
+)
+
+func main() {
+	logstr := "Fatal"
+	k := redis.NewRedisMessage(logstr)
+	lv, err := logmgr.ParseLoglevel(logstr)
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
+	}
+	for {
+		if lv < logmgr.ERROR {
+			k.Debug("This is Debug log")
+			k.Error("This is Errors log")
+			k.Info("This is Info log")
+			k.Warning("This is Warning log")
+		} else if lv <= logmgr.FATAL {
+			k.Error("This is Errors log")
+			k.Fatal("This is Fatal log")
+		}
+	}
+
+}
+
+```
+
+Redis Consumer subcribe code for example：
+```
+package main
+
+import (
+	"loghub/src/redis"
+	"os"
+	"os/signal"
+)
+
+func main() {
+	var (
+		logstr      string = "Fatal"
+		ChannelName string = "mylog" //
+	)
+
+	rd := redis.NewRedisMessage(logstr)
+	// 验证链接是否正常
+
+	if rd.Client == nil {
+		rd.InitRedis()
+	}
+	// 获取消费通道,确保Redis一个一个发送消息
+
+	//logmgr.FailOnError(err, "Rabbitmq Consumer Failure")
+	go func() {
+		redis.Subscriber(rd.Client, ChannelName)
+	}()
+	signals := make(chan os.Signal, 1)
+	select {
+	case <-signals:
+		signal.Notify(signals, os.Interrupt)
+	}
+}
+
+```
