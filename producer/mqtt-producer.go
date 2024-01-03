@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"loghub/src/hivemq"
 	"loghub/src/logmgr"
+	"os"
 )
 
 func main() {
 	logstr := "Fatal"
 	mt := hivemq.NewMQTTMessage(logstr)
-	if mt.Client == nil {
+	if token := mt.Client.Connect(); token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+		os.Exit(1)
 		mt.InitHivemq()
 	}
 	// 验证链接是否正常

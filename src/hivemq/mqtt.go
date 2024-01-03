@@ -102,10 +102,14 @@ func subCallBackFunc(client mqtt.Client, msg mqtt.Message) {
 func Publisher(client mqtt.Client, topic string, qos byte, message string) {
 	for {
 		// 发布消息到频道
-		err := client.Publish(topic, qos, true, message)
-		if err != nil {
-			panic(err)
+		token := client.Publish(topic, qos, true, message)
+		if token != nil {
+			panic(token)
 		}
+		token.Wait()
+
+		client.Disconnect(250)
+		fmt.Println("Message published.")
 		time.Sleep(1 * time.Second)
 	}
 }
