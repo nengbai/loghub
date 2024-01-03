@@ -24,7 +24,7 @@ type MqttMessage struct {
 	QoS    int8
 }
 
-func NewRedisMessage(logstr string) *MqttMessage {
+func NewMQTTMessage(logstr string) *MqttMessage {
 	loglv, err := logmgr.ParseLoglevel(logstr)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -36,12 +36,6 @@ func NewRedisMessage(logstr string) *MqttMessage {
 	logmgr.FailOnError(err, "Redis初始化失败:")
 	return fl
 }
-
-const (
-	QoS0 = 0 // 至多一次
-	QoS1 = 1 // 至少一次
-	QoS2 = 2 // 确保只有一次
-)
 
 func (r *MqttMessage) InitHivemq() error {
 	// 1.读取配置文件

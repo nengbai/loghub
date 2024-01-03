@@ -427,7 +427,6 @@ func main() {
 }
 
 ```
-
 Redis Consumer subcribe code for example：
 ```
 package main
@@ -463,4 +462,90 @@ func main() {
 	}
 }
 
+```
+
+### 3.5. Messages Exchange Hub example for mqtt
+Edit config/config.yaml add hiveMQ configure as below:
+
+```
+hivemq:
+  addrs: 
+  - "190.2.28.1:1883"
+  password: O**@******om
+  username: admin
+  topic: mylog
+  QoS0: 0    // 至多一次
+  QoS1: 1    // 至少一次
+  QoS2: 2    // 确保只有一次
+```
+
+MQTT Producer puscribe code for example：
+```
+package main
+
+import (
+	"fmt"
+	"loghub/src/hivemq"
+	"loghub/src/logmgr"
+)
+
+func main() {
+	logstr := "Fatal"
+	mt := hivemq.NewMQTTMessage(logstr)
+	if mt.Client == nil {
+		mt.InitHivemq()
+	}
+	// 验证链接是否正常
+	lv, err := logmgr.ParseLoglevel(logstr)
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
+	}
+	for {
+		if lv < logmgr.ERROR {
+			mt.Debug("This is Debug log")
+			mt.Error("This is Errors log")
+			mt.Info("This is Info log")
+			mt.Warning("This is Warning log")
+		} else if lv <= logmgr.FATAL {
+			mt.Error("This is Errors log")
+			mt.Fatal("This is Fatal log")
+		}
+	}
+
+}
+```
+
+MQTT Consumer subcribe code for example：
+```
+package main
+
+import (
+	"loghub/src/hivemq"
+	"os"
+	"os/signal"
+)
+
+func main() {
+	var (
+		logstr string = "Fatal"
+	)
+
+	mt := hivemq.NewMQTTMessage(logstr)
+
+	if mt.Client == nil {
+		mt.InitHivemq()
+	}
+
+	// 获取消费通道,确保hivemq一个一个发送消息 qos2
+	//logmgr.FailOnError(err, "Rabbitmq Consumer Failure")
+	go func() {
+		hivemq.Subscribe(mt.Client, mt.Topic, byte(mt.QoS))
+	}()
+	signals := make(chan os.Signal, 1)
+	select {
+	case <-signals:
+		signal.Notify(signals, os.Interrupt)
+	}
+}
 ```
